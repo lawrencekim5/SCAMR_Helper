@@ -13,12 +13,15 @@ $sourceFolder = Read-Host "Enter the file path or URL of the root directory of y
 #############################################################################
 
 # GitHub and GitLab use https so this is the easiest way to detect a URL
-if ($sourceFolder -Match "https://") {
+
  
+# Detecting URLs is easiest by matching https in input   
+if ($sourceFolder -Match 'https://') {
+
+
     ##########
     # Handling GitHub Use Cases
     ##########
-
     if ($sourceFolder -Match "https://github") {
         $type = 'github'
         
@@ -32,21 +35,28 @@ if ($sourceFolder -Match "https://") {
     ##########
 
 
-    # Example code for using the API in PowerShell to perform requests.
-#   elseif ($sourceFolder -Match "https://gitlab") {
-#       $type = 'gitlab'
-#
-#
-#        $headers = @{
-#            "PRIVATE-TOKEN" = "*****************"
-#        }
-#        $body = @{
-#            "branch" = "main"
-#            "commit_message" = "this is a commit"
-#            "actions" = ""
-#        }
-#        Invoke-RestMethod -Verbose -Header $headers -ContentType 'application/json' -Body ($body|ConvertTo-Json) -Method Post -Uri "https://gitlab.com/api/v4/projects/****/repository/commits"
-#    }
+
+    elseif ($sourceFolder -Match "https://gitlab") {
+        $type = 'gitlab'
+
+        # https://gitlab.com/lawrencekim5-group/SCAMR_Helper_SampleSourceCode
+        # https://gitlab.com/api/v4/projects/lawrencekim5-group%2fSCAMR_Helper_SampleSourceCode/repository/tree
+    
+        # URL encoding input so that it can be properly used with the GitLab API
+        $URLencodedSourceFolder = [System.Web.HttpUtility]::UrlEncode($sourceFolder)
+        $URLencodedSourcePath = $URLencodedSourceFolder.SubString(27)
+    
+
+        # Get user's GitLab API Token
+        $token = Read-Host "Enter your GitLab API Token"
+        
+        # Authorize GitLab access through token in header
+        $headers = @{          
+            "PRIVATE-TOKEN" = "$token"
+        }
+
+        $DirectoryListURL = 'https://gitlab.com/api/v4/projects/lawrencekim5-group%2fSCAMR_Helper_SampleSourceCode/repository/tree'
+        }
 
 
     # Exit on invalid input
@@ -61,9 +71,14 @@ if ($sourceFolder -Match "https://") {
     ##########
 
 
-    # Call the GitHub API to get information about the root directory
+    # Call the GitHub/GitLab API to get information about the root directory
     try {
-    $remoteFileList = Invoke-RestMethod $API_URL -UseBasicParsing -ErrorAction Stop
+        if ($type -eq 'github') {
+            $remoteFileList = Invoke-RestMethod $API_URL -UseBasicParsing -ErrorAction Stop
+        }
+        else {
+            $remoteFileList = Invoke-RestMethod -Headers $headers -Uri $DirectoryListURL -UseBasicParsing -ErrorAction Stop
+        }
     }
 
     catch {
@@ -83,8 +98,16 @@ if ($sourceFolder -Match "https://") {
     # Displays the names of files and directories in the root directory. Also formats the output to be cleaner.
     ""
     Write-Host "Files found in directory:"
-    $remoteFileListArray | Where-Object {$_ -like '*name*'} | ForEach-Object {$_.Substring(7)}
 
+    # Formatting GitHub API Output
+    if ($type -eq 'github') {
+        $remoteFileListArray | Where-Object {$_ -like '*name*'} | ForEach-Object {$_.Substring(7)}
+    }
+
+    # Formatting GitLab API Output
+    else {
+        $remoteFileListArray | Where-Object {$_ -like '*name*'} | ForEach-Object {$_.Substring(5)}
+    }
     # [y/n] Confirmation Prompt
     ""
     $confirmation = Read-Host "Does this look correct? [y/n]"
@@ -101,8 +124,8 @@ if ($sourceFolder -Match "https://") {
 
                 # Add way to get hyperlink for GitHub
                 # https://github.com/lawrencekim5/SCAMR_Helper_SampleSourceCode/blob/main/Objects/clinic/listobject.c.h#L8
-                $hyperlink_base = '$sourceFolder/blob/main/'
-                Write-Host "Hyperlink format is $sourceFolder/blob/main/{path}"
+                $hyperlink_base = "$sourceFolder" + '/blob/main/'
+                Write-Host "Hyperlink format is $hyperlink_base{path}"
 
             exit
             }
@@ -111,17 +134,19 @@ if ($sourceFolder -Match "https://") {
             # Handling GitLab Hyperlink Creation
             ##########
 
-            elseif ($type -eq 'gitlab') {
+            else {
+            # https://gitlab.com/lawrencekim5-group/SCAMR_Helper_SampleSourceCode/-/blob/main/Include/audit.h?ref_type=heads
+            $hypterlink_base = "$sourceFolder" + '/-/blob/main/}'
+            Write-Host "Hyperlink format is $hyperlink_base{path}"
+            exit
             }
 
-            else {
-                exit
-            }
         }
 
-    # Exit code if [y] is not the input
+        # Exit code if [y] is not the input
         elseif ($confirmation -eq 'n') {
             Write-Host "Exiting script. Please rerun the script to try again."
+            exit
         }
 
         else {
@@ -157,7 +182,7 @@ else {
 
                 # This section of the code generates the hyperlink based on the input path
                 $hyperlink_base = 'vscode://file/$sourceFolder\'
-                Write-Host 'Hyper link format is vscode://file/$sourceFolder\{filename}'
+                Write-Host "Hyper link format is vscode://file/$sourceFolder\{filename}"
 
 
                 exit
