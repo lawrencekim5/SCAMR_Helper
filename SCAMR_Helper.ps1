@@ -129,13 +129,11 @@ if ($sourceFolder -Match 'https://') {
             ##########
 
             if ($type -eq 'github') {
-
                 # Add way to get hyperlink for GitHub
                 # https://github.com/lawrencekim5/SCAMR_Helper_SampleSourceCode/blob/main/Objects/clinic/listobject.c.h#L8
                 $hyperlink_base = "$sourceFolder" + '/blob/main/'
                 Write-Host "Hyperlink format is $hyperlink_base{path}"
-
-            exit
+                exit
             }
 
             ##########
@@ -143,11 +141,12 @@ if ($sourceFolder -Match 'https://') {
             ##########
 
             else {
-            # https://gitlab.com/lawrencekim5-group/SCAMR_Helper_SampleSourceCode/-/blob/main/Include/audit.h?ref_type=heads
-            $hypterlink_base = "$sourceFolder" + '/-/blob/main/}'
-            Write-Host "Hyperlink format is $hyperlink_base{path}"
-            exit
+                # https://gitlab.com/lawrencekim5-group/SCAMR_Helper_SampleSourceCode/-/blob/main/Include/audit.h?ref_type=heads
+                $hyperlink_base = "$sourceFolder" + '/-/blob/main/}'
+                Write-Host "Hyperlink format is $hyperlink_base{path}"
+                exit
             }
+
 
         }
 
