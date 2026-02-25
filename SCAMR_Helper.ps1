@@ -44,6 +44,8 @@ if ($sourceFolder -Match 'https://') {
     
         # URL encoding input so that it can be properly used with the GitLab API
         $URLencodedSourceFolder = [System.Web.HttpUtility]::UrlEncode($sourceFolder)
+
+        # Strip first 27 characters to only get the file path. For robustness may need to make this strip after '.com'
         $URLencodedSourcePath = $URLencodedSourceFolder.SubString(27)
     
 
@@ -55,7 +57,9 @@ if ($sourceFolder -Match 'https://') {
             "PRIVATE-TOKEN" = "$token"
         }
 
-        $DirectoryListURL = 'https://gitlab.com/api/v4/projects/lawrencekim5-group%2fSCAMR_Helper_SampleSourceCode/repository/tree'
+        # Format the GitLab URL using the URL encoded path
+        $DirectoryListURL = 'https://gitlab.com/api/v4/projects/' + "$URLencodedSourcePath" + '/repository/tree'
+        
         }
 
 
@@ -73,9 +77,13 @@ if ($sourceFolder -Match 'https://') {
 
     # Call the GitHub/GitLab API to get information about the root directory
     try {
+
+        # Call GitHub API
         if ($type -eq 'github') {
             $remoteFileList = Invoke-RestMethod $API_URL -UseBasicParsing -ErrorAction Stop
         }
+        
+        # Call GitLab API
         else {
             $remoteFileList = Invoke-RestMethod -Headers $headers -Uri $DirectoryListURL -UseBasicParsing -ErrorAction Stop
         }
