@@ -1,4 +1,5 @@
 # Reinitializing variables. Weird things happen if I don't do this.
+Add-Type -AssemblyName System.Web
 $sourceFolder = ""
 $API_URL = ""
 
@@ -53,7 +54,9 @@ if ($sourceFolder -Match 'https://') {
         $URLencodedSourcePath = [System.Web.HttpUtility]::UrlEncode($sourcePath)
 
         # Get user's GitLab API Token
-        $token = Read-Host "Enter your GitLab API Token"
+        $token = Read-Host "Enter your GitLab API Token" -AsSecureString
+        $token = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($token))
+
         
         # Authorize GitLab access through token in header
         # FIXME - add some way to take this in as a secure string
@@ -265,6 +268,8 @@ Function Get-CSVPath($initialDirectory) {
 
 try {
     $CSVfilepath = Get-CSVPath
+    # Create Temp file with pipe delimiter to avoid errors in parsing. No way anyone would have a prexisting file with this name
+    
     $rawCSVdata = Import-CSV -Path $CSVfilepath
 }
 
@@ -275,6 +280,7 @@ catch {
 }
 
 
+
 # **Just some test code to get the file headers from the CSV file**
 # $columns = ($rawCSVdata | Get-Member -MemberType NoteProperty).Name
 # Write-Host $columns
@@ -282,18 +288,21 @@ catch {
 ###############
 # This section of code extracts the name of the column header that is used for filepaths in the CSV.
 ###############
-# Creates an array storing the values underneath each column header. This is surprisingly robust as long as if the filepath does not contain semicolons
+# Creates an array storing the values underneath each column header. This works as long as semicolons aren't used in file names
 $CSVdatafields = $rawCSVdata[0] -split ";"
+    Write-Host "CSVDatafields is: $CSVdatafields"
+
+
 
 # converting sourcePath to the minimum necessary for identification for compatibility
 if ($type -ne 'local') {
     $sourcePath = $sourcePath -replace '.*/', '' -replace '/$',''
 }
 
+
 # Loops through the array and identifies matches with the $sourcePath variable. This allows for the column header for filenames
 # to be retrieved without any hardcoding.
 foreach ($item in $CSVdatafields) {
-  
     if ($item.Contains("$sourcePath")) {
         # Regex to remove the equals sign and everything afterwards, and white spaces. This leaves just the column header name
         $filenameHeader = $item -replace '=.*$', '' -replace '\s+', ''
@@ -301,13 +310,12 @@ foreach ($item in $CSVdatafields) {
 }
 
 # Error handing incase source path can not be identified in the CSV file
-if ($filenameHeader -eq '') {
+if ($filenameHeader -eq "") {
     Write-Host "Source code path was unable to be identified in the CSV file. Please check the file and make sure that it matches your source code repository location."
     Read-Host "Exiting script. Press any key to exit"
     exit
 }
 
-Write-Host $filenameHeader
 
 
 
@@ -329,6 +337,7 @@ foreach ($item in $rawCSVdata) {
     Write-Host "Line number: $item_line"
     Write-Host "CWE:         $item_cwe"
     ""
+
         
     ###############################################
     # Hyperlink creation based on repository type #
@@ -363,19 +372,16 @@ foreach ($item in $rawCSVdata) {
         }
 
         else {
-            exit
-        }
-        
-
-        # Hyperlinking to MITRE CWEs
-
-
+            $breakcounter += 1
+        }  
     }
 
     # Stop looping once filename doesn't exist in item
-    else {
+    if ($breakcounter -gt 50) {
         break
     }
+
+
 
 
 
@@ -387,18 +393,22 @@ foreach ($item in $rawCSVdata) {
     # CSV Modification code
 
     # Appends a column with the hyperlink to each object in the $rawCSVdata array
-    $item | Add-Member -MemberType NoteProperty -Name "Link to Finding" -Value "$hyperlink_clickable"
+    $item | Add-Member -MemberType NoteProperty -Name "Hyperlink to Finding" -Value "$hyperlink_clickable"
     
     # Creates MITRE hyperlink based off of the CWE identifier
     $MITRE_hyperlink = "=HYPERLINK(`"https://cwe.mitre.org/data/definitions/" + $item_cwe + ".html`"" + ", `"CWE: " + $item_cwe + "`")"
 
+
     # Appends a column with the hyperlink to the MITRE CWE site for each object in the $rawCSVdata array if an associated CWE exists
-    if ($item_cwe -ne '') {
-        $item | Add-Member -MemberType NoteProperty -Name "Link to MITRE CWE" -Value "$MITRE_hyperlink"
+    if ($item_cwe -eq '') {
+        $item | Add-Member -MemberType NoteProperty -Name "Hyperlink to MITRE CWE" -Value ''
     }
-    
-    
+    else {
+        $item | Add-Member -MemberType NoteProperty -Name "Hyperlink to MITRE CWE" -Value "$MITRE_hyperlink"
+    }
 }
+    
+
 
 # While iterates stays until an acceptable file name is given. This ensures that the file is saved with a valid name.
 $fileSaveSuccess = 'False'
