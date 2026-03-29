@@ -28,5 +28,5 @@ It's pretty easy to use!
 
 5. The script will automatically generate hyperlinks based on the file path or URL you inputted in step 3!
 
-6\. Open the generated CSV file in Excel to be able to use the generated hyperlink to access each line of source code referenced in your findings.
+6. Open the generated CSV file in Excel to be able to use the generated hyperlink to access each line of source code referenced in your findings.
 
