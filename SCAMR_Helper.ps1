@@ -59,7 +59,7 @@ if ($sourceFolder -Match 'https://') {
 
         
         # Authorize GitLab access through token in header
-        # FIXME - add some way to take this in as a secure string
+
         $headers = @{          
             "PRIVATE-TOKEN" = "$token"
         }
